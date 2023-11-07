@@ -34,5 +34,10 @@ def train_epoch_1(hidden_dim, batch_size, optimizer, **kwargs):
     model.eval()
     return np.array(epoch(train_dataloader, model, opt))
 
+# test_mlp_train_epoch_1()
 
-test_mlp_train_epoch_1()
+
+if __name__ == '__main__':
+    a = ndl.Tensor([1, 2, 3])
+    b = ndl.Tensor([5, 6, 7])
+    c = a + b

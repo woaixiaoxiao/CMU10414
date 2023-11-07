@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -std=c++11 -O2 -march=native   -shared  -o libndarray_backend_cpu.so CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o 

@@ -1,0 +1,3 @@
+/home/woaixiaoxiao/hpc/dlsys/hw3/build/CMakeFiles/rebuild_cache.dir
+/home/woaixiaoxiao/hpc/dlsys/hw3/build/CMakeFiles/edit_cache.dir
+/home/woaixiaoxiao/hpc/dlsys/hw3/build/CMakeFiles/ndarray_backend_cpu.dir
