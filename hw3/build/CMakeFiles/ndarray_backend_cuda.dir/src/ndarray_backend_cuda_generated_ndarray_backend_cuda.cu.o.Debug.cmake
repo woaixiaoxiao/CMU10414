@@ -79,9 +79,9 @@ set(CUDA_NVCC_FLAGS_MINSIZEREL  ; )
 set(CUDA_NVCC_FLAGS_RELEASE  ; )
 set(CUDA_NVCC_FLAGS_RELWITHDEBINFO  ; )
 set(nvcc_flags -m64;--std;c++11;-Dndarray_backend_cuda_EXPORTS) # list
-set(CUDA_NVCC_INCLUDE_DIRS [==[/usr/local/cuda-12.2/include;$<TARGET_PROPERTY:ndarray_backend_cuda,INCLUDE_DIRECTORIES>]==]) # list (needs to be in lua quotes to address backslashes)
+set(CUDA_NVCC_INCLUDE_DIRS [==[/usr/local/cuda-12.2/include;/home/woaixiaoxiao/miniconda3/include/python3.11;/home/woaixiaoxiao/miniconda3/envs/env_pytorch/lib/python3.9/site-packages/pybind11/include;/home/woaixiaoxiao/miniconda3/include/python3.11;/usr/local/cuda-12.2/include]==]) # list (needs to be in lua quotes to address backslashes)
 string(REPLACE "\\" "/" CUDA_NVCC_INCLUDE_DIRS "${CUDA_NVCC_INCLUDE_DIRS}")
-set(CUDA_NVCC_COMPILE_DEFINITIONS [==[$<TARGET_PROPERTY:ndarray_backend_cuda,COMPILE_DEFINITIONS>]==]) # list (needs to be in lua quotes see #16510 ).
+set(CUDA_NVCC_COMPILE_DEFINITIONS [==[]==]) # list (needs to be in lua quotes see #16510 ).
 set(format_flag "-c") # string
 set(cuda_language_flag ) # list
 

@@ -1,7 +1,8 @@
 file(REMOVE_RECURSE
+  "/home/woaixiaoxiao/hpc/dlsys/hw3/python/needle/backend_ndarray/ndarray_backend_cpu.cpython-311-x86_64-linux-gnu.so"
+  "/home/woaixiaoxiao/hpc/dlsys/hw3/python/needle/backend_ndarray/ndarray_backend_cpu.pdb"
   "CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o"
-  "libndarray_backend_cpu.pdb"
-  "libndarray_backend_cpu.so"
+  "CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o.d"
 )
 
 # Per-language clean rules from dependency scanning.

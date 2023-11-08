@@ -1,1 +1,1 @@
-/usr/bin/c++ -fPIC -std=c++11 -O2 -march=native   -shared  -o libndarray_backend_cpu.so CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o 
+/usr/bin/g++ -fPIC -std=c++11 -O2 -march=native  -g -shared  -o /home/woaixiaoxiao/hpc/dlsys/hw3/python/needle/backend_ndarray/ndarray_backend_cpu.cpython-311-x86_64-linux-gnu.so CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o 

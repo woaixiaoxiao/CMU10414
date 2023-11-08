@@ -8,7 +8,6 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/woaixiaoxiao/hpc/dlsys/hw3/src/ndarray_backend_cpu.cc" "CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o" "gcc" "CMakeFiles/ndarray_backend_cpu.dir/src/ndarray_backend_cpu.cc.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.
