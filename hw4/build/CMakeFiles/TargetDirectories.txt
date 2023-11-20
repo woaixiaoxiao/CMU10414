@@ -1,0 +1,4 @@
+/home/woaixiaoxiao/hpc/dlsys/hw4/build/CMakeFiles/ndarray_backend_cpu.dir
+/home/woaixiaoxiao/hpc/dlsys/hw4/build/CMakeFiles/ndarray_backend_cuda.dir
+/home/woaixiaoxiao/hpc/dlsys/hw4/build/CMakeFiles/edit_cache.dir
+/home/woaixiaoxiao/hpc/dlsys/hw4/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,10 @@
+{
+  "tests/hw4/test_cifar_ptb_data.py::test_cifar10_loader[cpu-True-1]": true,
+  "tests/hw4/test_cifar_ptb_data.py::test_cifar10_loader[cpu-True-15]": true,
+  "tests/hw4/test_cifar_ptb_data.py::test_cifar10_loader[cpu-False-1]": true,
+  "tests/hw4/test_cifar_ptb_data.py::test_cifar10_loader[cpu-False-15]": true,
+  "tests/hw4/test_cifar_ptb_data.py": true,
+  "tests/hw4/test_conv.py": true,
+  "tests/hw4/test_nd_backend.py": true,
+  "tests/hw4/test_sequence_models.py": true
+}
