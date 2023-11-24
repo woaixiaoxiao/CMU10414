@@ -41,56 +41,30 @@ class RNNCell(Module):
         """
         super().__init__()
         # BEGIN YOUR SOLUTION
-        self.input_size = input_size
-        self.hidden_size = hidden_size
+        self.device = device
+        self.dtype = dtype
         self.bias = bias
-
-        self.W_ih = Parameter(
-            init.rand(
-                input_size,
-                hidden_size,
-                low=-1 / hidden_size**0.5,
-                high=1 / hidden_size**0.5,
-                device=device,
-                dtype=dtype,
-                requires_grad=True
-                )
-            )
-        self.W_hh = Parameter(
-            init.rand(
-                hidden_size,
-                hidden_size,
-                low=-1 / hidden_size**0.5,
-                high=1 / hidden_size**0.5,
-                device=device,
-                dtype=dtype,
-                requires_grad=True
-                )
-            )
+        self.hidden_size = hidden_size
+        bound = np.sqrt(1 / hidden_size)
+        self.W_ih = Parameter(init.rand(input_size, hidden_size, low=-bound,
+                              high=bound, device=device, dtype=dtype, requires_grad=True))
+        self.W_hh = Parameter(init.rand(hidden_size, hidden_size, low=-bound,
+                              high=bound, device=device, dtype=dtype, requires_grad=True))
         if bias:
-            self.bias_ih = Parameter(
-                init.rand(
-                    hidden_size,
-                    low=-1 / hidden_size**0.5,
-                    high=1 / hidden_size**0.5,
-                    device=device,
-                    dtype=dtype,
-                    requires_grad=True
-                    )
-                )
-            self.bias_hh = Parameter(
-                init.rand(
-                    hidden_size,
-                    low=-1 / hidden_size**0.5,
-                    high=1 / hidden_size**0.5,
-                    device=device,
-                    dtype=dtype,
-                    requires_grad=True
-                    )
-                )
-        self.nonlinearity = Tanh() if nonlinearity == 'tanh' else ReLU()
-        # BEGIN YOUR SOLUTION
-
+            self.bias_ih = Parameter(init.rand(
+                hidden_size, low=-bound, high=bound, device=device, dtype=dtype, requires_grad=True))
+            self.bias_hh = Parameter(init.rand(
+                hidden_size, low=-bound, high=bound, device=device, dtype=dtype, requires_grad=True))
+        else:
+            self.bias_ih = None
+            self.bias_hh = None
+        if nonlinearity == "tanh":
+            self.nonlinearity = Tanh()
+        elif nonlinearity == "relu":
+            self.nonlinearity = ReLU()
+        else:
+            raise ValueError(
+                "unsupported nonlinearity function. Only support ReLU and Tanh.")
         # END YOUR SOLUTION
 
     def forward(self, X, h=None):
@@ -105,14 +79,15 @@ class RNNCell(Module):
             for each element in the batch.
         """
         # BEGIN YOUR SOLUTION
-        out = X @ self.W_ih
+        batch_size, _ = X.shape
+        if h is None:
+            h = init.zeros(batch_size, self.hidden_size,
+                           device=self.device, dtype=self.dtype)
         if self.bias:
-            out += self.bias_ih.reshape((1, -1)).broadcast_to(out.shape)
-        if h:
-            out += h @ self.W_hh
-        if self.bias:
-            out += self.bias_hh.reshape((1, -1)).broadcast_to(out.shape)
-        return self.nonlinearity(out)
+            return self.nonlinearity(X @ self.W_ih + self.bias_ih.reshape((1, self.hidden_size)).broadcast_to((batch_size, self.hidden_size))
+                                     + h @ self.W_hh + self.bias_hh.reshape((1, self.hidden_size)).broadcast_to((batch_size, self.hidden_size)))
+        else:
+            return self.nonlinearity(X @ self.W_ih + h @ self.W_hh)
         # END YOUR SOLUTION
 
 
@@ -141,18 +116,13 @@ class RNN(Module):
         """
         super().__init__()
         # BEGIN YOUR SOLUTION
-        self.hidden_size = hidden_size
         self.device = device
         self.dtype = dtype
+        self.hidden_size = hidden_size
         self.num_layers = num_layers
-        rnn_cells = [RNNCell(input_size, hidden_size, bias,
-                             nonlinearity, device, dtype)]
-        for i in range(num_layers - 1):
-            rnn_cells.append(
-                RNNCell(hidden_size, hidden_size, bias,
-                        nonlinearity, device, dtype)
-                )
-        self.rnn_cells = rnn_cells
+        self.rnn_cells = [RNNCell(input_size, hidden_size, bias=bias, nonlinearity=nonlinearity, device=device, dtype=dtype)] + \
+                         [RNNCell(hidden_size, hidden_size, bias=bias, nonlinearity=nonlinearity,
+                                  device=device, dtype=dtype) for _ in range(num_layers - 1)]
         # END YOUR SOLUTION
 
     def forward(self, X, h0=None):
@@ -168,26 +138,21 @@ class RNN(Module):
         h_n of shape (num_layers, bs, hidden_size) containing the final hidden state for each element in the batch.
         """
         # BEGIN YOUR SOLUTION
-        # 对输入的x和h进行预处理，将纯tensor，变成一个列表中的多个tensor，便于访问
-        xs = ops.split(X, 0)
+        _, batch_size, _ = X.shape
         if h0 is None:
-            hs = [None for i in range(self.num_layers)]
+            h0 = [init.zeros(batch_size, self.hidden_size, device=self.device,
+                             dtype=self.dtype) for _ in range(self.num_layers)]
         else:
-            hs = ops.split(h0, 0)
-        # 遍历每个时刻
-        out = []
-        for t, x in enumerate(xs):
-            # 记录这个时刻的所有隐层
-            hidden_layers = []
-            # 遍历每一层
-            for l, model in enumerate(self.rnn_cells):
-                x = model(x, hs[l])
-                hidden_layers.append(x)
-            out.append(x)
-            hs[l] = hidden_layers
-        out = ops.stack(out, 0)
-        hs = ops.stack(hs, 0)
-        return out, hs
+            h0 = tuple(ops.split(h0, 0))
+        h_n = []
+        inputs = list(tuple(ops.split(X, 0)))
+        for num_layer in range(self.num_layers):
+            h = h0[num_layer]
+            for t, input in enumerate(inputs):
+                h = self.rnn_cells[num_layer](input, h)
+                inputs[t] = h
+            h_n.append(h)
+        return ops.stack(inputs, 0), ops.stack(h_n, 0)
         # END YOUR SOLUTION
 
 

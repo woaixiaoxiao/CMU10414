@@ -14,8 +14,8 @@ np.random.seed(1)
 
 def backward_check(f, *args, **kwargs):
     eps = 1e-5
-    c = np.random.randn(*out.shape)
     out = f(*args, **kwargs)
+    c = np.random.randn(*out.shape)
     numerical_grad = [np.zeros(a.shape) for a in args]
     num_args = len(args)
     for i in range(num_args):

@@ -356,7 +356,7 @@ class Tanh(TensorOp):
 
     def gradient(self, out_grad, node):
         # BEGIN YOUR SOLUTION
-        return out_grad * (1 - ((tanh(node.inputs[0]))**2))
+        return out_grad * (1 - tanh(node.inputs[0])**2)
         # END YOUR SOLUTION
 
 
@@ -393,8 +393,7 @@ class Stack(TensorOp):
 
     def gradient(self, out_grad, node):
         # BEGIN YOUR SOLUTION
-        a = split(out_grad, self.axis)
-        return a
+        return split(out_grad, self.axis)
         # END YOUR SOLUTION
 
 
@@ -441,12 +440,12 @@ class Flip(TensorOp):
 
     def compute(self, a):
         # BEGIN YOUR SOLUTION
-        return array_api.flip(a, axis=self.axes)
+        return a.flip(self.axes)
         # END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         # BEGIN YOUR SOLUTION
-        return Flip(out_grad, axis=self.axes)
+        return flip(out_grad, self.axes)
         # END YOUR SOLUTION
 
 
@@ -461,31 +460,25 @@ class Dilate(TensorOp):
 
     def compute(self, a):
         # BEGIN YOUR SOLUTION
-        # 如果指定的轴不合法
-        for i in self.axes:
-            if i >= len(a.shape):
-                return a
-        # 构造新的shape
         new_shape = list(a.shape)
-        for i in self.axes:
-            new_shape[i] += new_shape[i] * self.dilation
-        # 构造新的数组
-        ret = init.zeros(*new_shape, device=a.device)
-        # 构造切片
-        slices = []
-        for i in range(len(a.shape)):
-            if i in self.axes:
-                slices.append((0, new_shape[i], self.dilation + 1))
-            else:
-                slices.append((0, new_shape[i], 1))
-        # 赋值
-        ret.cached_data[tuple(slices)] = a
-        return ret.cached_data
+        for axis in self.axes:
+            if axis >= len(a.shape):
+                continue
+            new_shape[axis] = new_shape[axis] * (self.dilation + 1)
+        new_shape = tuple(new_shape)
+        arr = a.device.full(new_shape, 0)
+        slices = [slice(0, n) for n in arr.shape]
+        for axis in self.axes:
+            if axis >= len(a.shape):
+                continue
+            slices[axis] = slice(0, arr.shape[axis], self.dilation + 1)
+        arr[tuple(slices)] = a
+        return arr
         # END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         # BEGIN YOUR SOLUTION
-        return undilate(out_grad, self.axes, self.dilation)
+        return UnDilate(self.axes, self.dilation)(out_grad)
         # END YOUR SOLUTION
 
 
@@ -500,14 +493,12 @@ class UnDilate(TensorOp):
 
     def compute(self, a):
         # BEGIN YOUR SOLUTION
-        # 构造出切片
-        slices = []
-        for i in range(len(a.shape)):
-            if i in self.axes:
-                slices.append(slice(0, a.shape[i], self.dilation + 1))
-            else:
-                slices.append(slice(0, a.shape[i], 1))
-        return a[tuple(slices)]
+        slices = [slice(0, n) for n in a.shape]
+        for axis in self.axes:
+            if axis >= len(a.shape):
+                continue
+            slices[axis] = slice(0, a.shape[axis], self.dilation + 1)
+        return a[tuple(slices)].compact()
         # END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
@@ -524,60 +515,47 @@ class Conv(TensorOp):
     def __init__(self, stride: Optional[int] = 1, padding: Optional[int] = 0):
         self.stride = stride
         self.padding = padding
-    # NHWC
-    # KKIO
 
     def compute(self, A, B):
         # BEGIN YOUR SOLUTION
-        # 给A加padding
-        A = A.pad((0, 0), (self.padding, self.padding),
-                  (self.padding, self.padding), (0, 0))
-        # 取出各种参数
+        A = A.pad(((0, 0), (self.padding, self.padding),
+                  (self.padding, self.padding), (0, 0)))
         N, H, W, C_in = A.shape
-        K, _, _, C_out = B.shape
+        K, K_, C_in_, C_out = B.shape
         Ns, Hs, Ws, Cs = A.strides
-        # 将A给变成准备矩阵乘法的样子，先as_stride，再reshape
-        A = A.as_strided((N, H - K + 1, W - K + 1, K, K, C_in),
-                         (Ns, Hs, Ws, Hs, Ws, Cs)).compact()
-        A = A.reshape((N, H - K + 1, W - K + 1, -1))
-        # 矩阵相乘，注意形状
-        B = B.reshape(-1, C_out)
-        out = A @ B
-        # 返回答案，注意形状
-        return out[:, ::self.stride, ::self.stride, :]
+        assert K == K_, "Conv kernel should be a square tensor"
+        assert C_in == C_in_, "Conv kernel and input are not compatible"
+
+        inner_dim = K * K * C_in
+        out_H, out_W = (H - K + 1) // self.stride, (W - K + 1) // self.stride
+        im2col = A.as_strided(shape=(N, out_H, out_W, K, K, C_in),
+                              strides=(Ns, Hs * self.stride, Ws * self.stride, Hs, Ws, Cs))\
+            .compact()\
+            .reshape((N * out_H * out_W, inner_dim))
+        out = im2col @ B.compact().reshape((K * K_ * C_in_, C_out))
+        return out.compact().reshape((N, out_H, out_W, C_out))
         # END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         # BEGIN YOUR SOLUTION
-        X, Weight = node.inputs[0], node.inputs[1]
-        '''
-        out_grad N, H-K+1+2*p, W-K+1+2*p, C_out
-        X N, H, W, C_in
-        W K, K, C_in, C_out
-        '''
-        _, H, W, _ = X.shape
-        K = Weight.shape[0]
-        W_flip = flip(Weight, (0, 1)).transpose((2, 3))
+        X, W = node.inputs
+        K, _, _, _ = W.shape
+
         if self.stride > 1:
             out_grad = dilate(out_grad, (1, 2), self.stride - 1)
-        dX = conv(out_grad, W_flip, padding=K - 1)
-        # dX = Tensor(dX.cached_data[:, K-1:H+K-1, K-1:W+K-1, :])
-        # NOTE: begin with self.padding!
-        # NOTE: device
-        dX = Tensor(dX.cached_data[:, self.padding:H + self.padding,
-                    self.padding:W + self.padding, :], device=dX.device, dtype=dX.dtype)
-        '''
-        X, out_grad
-        C_in, H, W, N
-        H-K+1+2*p, W-K+1+2*p, N, C_out
-        
-        C_in, K, K, C_out
-        '''
-        X = X.transpose((0, 3))
-        out_grad = out_grad.transpose((0, 2)).transpose((0, 1))
-        dW = conv(X, out_grad, padding=self.padding)
-        dW = dW.transpose((0, 2)).transpose((0, 1))
-        return dX, dW
+        W_permute = transpose(flip(W, (0, 1)), (2, 3))  # K * K * C_out * C_in
+        # out_grad: # N * (H+2P-K+1) * (W+2P-K+1) * C_out
+        X_grad = conv(out_grad, W_permute, padding=K - 1 - self.padding)
+
+        X_permute = transpose(X, (0, 3))  # C_in * H * W * N
+        # (H+2P-K+1) * (W+2P-K+1) * N * C_out
+        grad_permute = transpose(transpose(out_grad, (0, 1)), (1, 2))
+        # C_in * H * W * C_out
+        W_grad = conv(X_permute, grad_permute, padding=self.padding)
+        W_grad = transpose(transpose(W_grad, (0, 1)),
+                           (1, 2))  # H * W * C_in * C_out
+
+        return X_grad, W_grad
         # END YOUR SOLUTION
 
 

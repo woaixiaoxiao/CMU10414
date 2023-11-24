@@ -1,6 +1,6 @@
 """Core data structures."""
 import needle
-from .backend_numpy import Device, cpu, all_devices
+# from .backend_numpy import Device, cpu, all_devices
 from typing import List, Optional, NamedTuple, Tuple, Union
 from collections import namedtuple
 import numpy
@@ -11,13 +11,8 @@ from needle import init
 LAZY_MODE = False
 TENSOR_COUNTER = 0
 
-# NOTE: we will import numpy as the array_api
-# as the backend for our computations, this line will change in later homeworks
-# import numpy as array_api
-
-# NDArray = numpy.ndarray
-
 from .backend_selection import array_api, NDArray, default_device
+from .backend_selection import Device, cpu, all_devices
 
 
 class Op:
@@ -217,7 +212,7 @@ class Tensor(Value):
                     array.numpy(), device=device, dtype=dtype
                     )
         else:
-            device = device if device else cpu()
+            device = device if device else default_device()
             cached_data = Tensor._array_from_numpy(
                 array, device=device, dtype=dtype)
 
@@ -272,7 +267,6 @@ class Tensor(Value):
 
     def detach(self):
         """Create a new tensor that shares the data but detaches from the graph."""
-        print('here4: ')
         return Tensor.make_const(self.realize_cached_data())
 
     @property

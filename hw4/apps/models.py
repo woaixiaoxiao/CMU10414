@@ -21,38 +21,34 @@ class ConvBN(ndl.nn.Module):
         # END YOUR SOLUTION
 
 
-class ResNet9(ndl.nn.Module):
+def ResidualBlock(in_channels, out_channels, kernel_size, stride, device=None):
+    # BEGIN YOUR SOLUTION
+    main_path = nn.Sequential(ConvBN(in_channels, out_channels, kernel_size, stride, device),
+                              ConvBN(in_channels, out_channels, kernel_size, stride, device))
+    return nn.Residual(main_path)
+    # END YOUR SOLUTION
+
+
+class ResNet9(nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
         ### BEGIN YOUR SOLUTION ###
-        self.layers = nn.Sequential(
-            ConvBN(3, 16, 7, 4, device=device, dtype=dtype),
-            ConvBN(16, 32, 3, 2, device=device, dtype=dtype),
-            nn.Residual(
-                nn.Sequential(
-                    ConvBN(32, 32, 3, 1, device=device, dtype=dtype),
-                    ConvBN(32, 32, 3, 1, device=device, dtype=dtype)
-                    )
-                ),
-            ConvBN(32, 64, 3, 2, device=device, dtype=dtype),
-            ConvBN(64, 128, 3, 2, device=device, dtype=dtype),
-            nn.Residual(
-                nn.Sequential(
-                    ConvBN(128, 128, 3, 1, device=device, dtype=dtype),
-                    ConvBN(128, 128, 3, 1, device=device, dtype=dtype)
-                    )
-                ),
-            nn.Flatten(),
-            nn.Linear(128, 128, device=device, dtype=dtype),
-            nn.ReLU(),
-            nn.Linear(128, 10, device=device, dtype=dtype)
-            )
-
+        self.model = nn.Sequential(ConvBN(3, 16, 7, 4, device=device),
+                                   ConvBN(16, 32, 3, 2, device=device),
+                                   ResidualBlock(32, 32, 3, 1, device=device),
+                                   ConvBN(32, 64, 3, 2, device=device),
+                                   ConvBN(64, 128, 3, 2, device=device),
+                                   ResidualBlock(128, 128, 3, 1,
+                                                 device=device),
+                                   nn.Flatten(),
+                                   nn.Linear(128, 128, device=device),
+                                   nn.ReLU(),
+                                   nn.Linear(128, 10, device=device))
         # END YOUR SOLUTION
 
     def forward(self, x):
         # BEGIN YOUR SOLUTION
-        return self.layers(x)
+        return self.model(x)
         # END YOUR SOLUTION
 
 
@@ -123,4 +119,3 @@ if __name__ == "__main__":
         "data/cifar-10-batches-py", train=True)
     train_loader = ndl.data.DataLoader(
         cifar10_train_dataset, 128, ndl.cpu(), dtype="float32")
-    print(dataset[1][0].shape)

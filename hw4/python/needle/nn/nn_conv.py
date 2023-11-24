@@ -31,8 +31,9 @@ class Conv(Module):
         # BEGIN YOUR SOLUTION
         shape = (self.kernel_size, self.kernel_size,
                  self.in_channels, self.out_channels)
+        self.padding = (kernel_size - 1) // 2
         # 构造W
-        self.W = Parameter(
+        self.weight = Parameter(
             init.kaiming_uniform(
                 self.in_channels * self.kernel_size * self.kernel_size,
                 self.out_channels * self.kernel_size * self.kernel_size,
@@ -45,7 +46,7 @@ class Conv(Module):
         if bias:
             self.bias = Parameter(
                 init.rand(
-                    int(self, in_channels),
+                    self.out_channels,
                     low=-1 / (in_channels * kernel_size**2)**0.5,
                     high=1 / (in_channels * kernel_size**2)**0.5,
                     device=device,
@@ -59,11 +60,12 @@ class Conv(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         # BEGIN YOUR SOLUTION
-        x = x.transpose((2, 3)).transpose(((1, 2)))
-        out = ops.conv(x, self.W, stride=self.stride,
-                       padding=self.kernel_size // 2)
+        x = x.transpose((1, 2)).transpose((2, 3))
+        out = ops.conv(x, self.weight, stride=self.stride,
+                       padding=self.padding)
         if self.bias:
-            out += self.bias.reshape((1, 1, 1, -1)).broadcast_to(out.shape)
-        out = out.transpose((1, 2)).transpose((2, 3))
+            out += self.bias.reshape((1, 1, 1, self.out_channels)
+                                     ).broadcast_to(out.shape)
+        out = out.transpose((2, 3)).transpose((1, 2))
         return out
         # END YOUR SOLUTION
